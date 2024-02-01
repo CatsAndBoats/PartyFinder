@@ -240,6 +240,8 @@ levelRangeInput[1] = settings.levelRange
 
 -- Save Configuration based on player involvement
 -- Function to save configuration settings to a file
+
+
 local function saveConfig()
     local configFile, err = io.open("config.lua", "w")
     if not configFile then
@@ -247,11 +249,11 @@ local function saveConfig()
         return
     end
     -- Print current configuration settings(Debug)
-    print("Saving configuration with the following settings:")
-    print("    Dark Mode Enabled: " .. tostring(darkModeEnabled[1]))
-    print("    Comment Box Enabled: " .. tostring(commentSetColumnEnabled[1]))
-    print("    Level Filter Checkbox: " .. tostring(levelFilterCheckbox[1]))
-    print("    Level Range: " .. tostring(levelRangeInput[1]))
+    -- print("Saving configuration with the following settings:")
+    -- print("    Dark Mode Enabled: " .. tostring(darkModeEnabled[1]))
+    -- print("    Comment Box Enabled: " .. tostring(commentSetColumnEnabled[1]))
+    -- print("    Level Filter Checkbox: " .. tostring(levelFilterCheckbox[1]))
+    -- print("    Level Range: " .. tostring(levelRangeInput[1]))
 
     -- Writing the configuration settings to the file
     configFile:write("return {\n")
