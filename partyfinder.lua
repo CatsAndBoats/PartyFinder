@@ -46,6 +46,7 @@ local commentSetColumnEnabled = { false };
 -- Filter Level Checkbox
 local levelFilterCheckbox = { false };
 local levelRangeInput = { '5' }; 
+
 local partyFinderEntries = T{}
 local results = T{};
 local modeData = T{};
@@ -216,6 +217,59 @@ local darkPfStyles = {
     -- ... add any other styles you need
 }
 
+-- Configuration
+-- Attempt to load the Configuration settings from config.lua
+local ok, settings = pcall(require, "config")
+if not ok then
+    print("Could not load config.lua, using default values.")
+    settings = {
+        darkModeEnabled = false,
+        commentBoxEnabled = false,
+        levelFilterCheckbox = false,
+        levelRange = "0"
+    }
+else
+    print("config.lua loaded successfully.")
+end
+
+-- Apply settings
+darkModeEnabled[1] = settings.darkModeEnabled
+commentSetColumnEnabled[1] = settings.commentBoxEnabled
+levelFilterCheckbox[1] = settings.levelFilterCheckbox
+levelRangeInput[1] = settings.levelRange
+
+-- Save Configuration based on player involvement
+-- Function to save configuration settings to a file
+local function saveConfig()
+    local configFile, err = io.open("config.lua", "w")
+    if not configFile then
+        print("Error opening file for writing: " .. tostring(err))
+        return
+    end
+    -- Print current configuration settings(Debug)
+    print("Saving configuration with the following settings:")
+    print("    Dark Mode Enabled: " .. tostring(darkModeEnabled[1]))
+    print("    Comment Box Enabled: " .. tostring(commentSetColumnEnabled[1]))
+    print("    Level Filter Checkbox: " .. tostring(levelFilterCheckbox[1]))
+    print("    Level Range: " .. tostring(levelRangeInput[1]))
+
+    -- Writing the configuration settings to the file
+    configFile:write("return {\n")
+    configFile:write("    darkModeEnabled = " .. tostring(darkModeEnabled[1]) .. ",\n")
+    configFile:write("    commentBoxEnabled = " .. tostring(commentSetColumnEnabled[1]) .. ",\n")
+    configFile:write("    levelFilterCheckbox = " .. tostring(levelFilterCheckbox[1]) .. ",\n")
+    configFile:write("    levelRange = " .. tostring(levelRangeInput[1]) .. "\n") -- Ensure levelRangeInput[1] is converted to string properly
+    configFile:write("}\n")
+
+    -- Error handling for file close operation
+    local success, err = configFile:close()
+    if not success then
+        print("Failed to close config file: " .. tostring(err))
+    else
+        print("Config saved successfully.")
+    end
+end
+
 
 local function ClearResults()
     results = T{}
@@ -333,7 +387,7 @@ local function RenderInterface()
 	-- Push the styles to change the UI colors
     local stylesToUse = darkModeEnabled[1] and darkPfStyles or lightPfStyles
 	PushStyles(stylesToUse); 
-	
+
     if (imgui.Begin('Party Finder', interface.IsOpen, ImGuiWindowFlags_AlwaysAutoResize)) then
         -- Set the cursor position to center the content
         local contentWidth = 700;  -- Adjust the width as needed
@@ -366,7 +420,10 @@ local function RenderInterface()
         --imgui.SameLine();
         imgui.Text('Filter:');
         imgui.SameLine();
-        imgui.Checkbox('##Filter_Checkbox', levelFilterCheckbox);
+        --imgui.Checkbox('##Filter_Checkbox', levelFilterCheckbox);
+        if imgui.Checkbox('##Filter_Checkbox', levelFilterCheckbox) then
+            saveConfig() -- Save settings when changed
+        end
         imgui.SameLine();
         imgui.Text('Range:');
         imgui.SameLine();
@@ -379,7 +436,10 @@ local function RenderInterface()
         local maxLevel = 75
         
         -- Create the InputInt with a smaller width
-        imgui.InputInt('##FilterRange_InputInt', levelRangeInput, 5);
+        --imgui.InputInt('##FilterRange_InputInt', levelRangeInput, 5);
+        if imgui.InputInt('##FilterRange_InputInt', levelRangeInput,5) then
+            saveConfig() -- Save settings when changed
+        end
         levelRangeInput[1] = math.min(maxLevel, math.max(minLevel, levelRangeInput[1]))
         
         -- Reset the item width to the default value
@@ -393,7 +453,10 @@ local function RenderInterface()
 
         imgui.Text('Comments:');
         imgui.SameLine();
-        imgui.Checkbox('##Comment_Checkbox', commentSetColumnEnabled);
+        --imgui.Checkbox('##Comment_Checkbox', commentSetColumnEnabled);
+        if imgui.Checkbox('##Comment_Checkbox', commentSetColumnEnabled) then
+            saveConfig() -- Save settings when changed
+        end
 
         -- Adjust panel width based on comment column visibility
         local panelWidth = commentSetColumnEnabled[1] and 900 or 530
@@ -414,7 +477,9 @@ local function RenderInterface()
         imgui.SameLine();
         imgui.Text('Dark Mode:');
         imgui.SameLine();
-        imgui.Checkbox('##Dark_Mode_Checkbox', darkModeEnabled)
+        if imgui.Checkbox('##Dark_Mode_Checkbox', darkModeEnabled) then
+            saveConfig() -- Save settings when changed
+        end
         -- Determine which styles to use based on the dark mode toggle
 
         imgui.BeginGroup();
