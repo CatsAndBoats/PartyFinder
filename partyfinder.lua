@@ -233,7 +233,7 @@ local darkPfStyles = {
 local function save_settings()
     -- Directly save the 'cfg' table
     settings.save('cfg');
-    print("Save Complete...")
+    --print("Save Complete...")
 end
 
 
