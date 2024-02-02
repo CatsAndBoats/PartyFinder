@@ -37,6 +37,9 @@ local guiimages = images.loadTextures();
 local queryActive = false;
 local opened = false;
 
+local settings = require('settings');
+
+
 -- Dark Mode CheckBox
 local darkModeEnabled = {false} 
 
@@ -46,6 +49,7 @@ local commentSetColumnEnabled = { false };
 -- Filter Level Checkbox
 local levelFilterCheckbox = { false };
 local levelRangeInput = { '5' }; 
+
 local partyFinderEntries = T{}
 local results = T{};
 local modeData = T{};
@@ -160,6 +164,15 @@ local seacomIconMapping = {
     ['Others'] = 6,
 }
 
+-- For ASHITA saving/loading fallback
+local cfg = {
+    darkModeEnabled = { value = false },
+    commentBoxEnabled = { value = false },
+    levelFilterCheckbox = { value = false },
+    levelRange = 5
+}
+
+
 local lightPfStyles =
 {
 	T{ImGuiCol_Text,                 {0.0, 0.0, 0.0, 1.0}},                    -- #000000FF (Black)
@@ -216,6 +229,42 @@ local darkPfStyles = {
     -- ... add any other styles you need
 }
 
+-- Function to save your settings
+local function save_settings()
+    -- Directly save the 'cfg' table
+    settings.save('cfg');
+    --print("Save Complete...")
+end
+
+
+local function load_settings()
+    -- Attempt to load the settings
+    local config = settings.load(cfg,'cfg')  -- Notice that I'm passing the name of the settings file, not the 'cfg' table itself.
+
+    -- Check if the settings were loaded successfully
+    if config then
+        -- Apply loaded settings to your cfg table
+        cfg.darkModeEnabled.value = config.darkModeEnabled.value
+        cfg.commentBoxEnabled.value = config.commentBoxEnabled.value
+        cfg.levelFilterCheckbox.value = config.levelFilterCheckbox.value
+        cfg.levelRange = config.levelRange
+        -- ... and so on for other settings
+    else
+        -- No settings were loaded; using default values from 'cfg'
+        print("No settings were loaded. Using defaults.")
+    end
+end
+
+settings.register('cfg', 'cfg_update', function(s)
+    if s ~= nil then cfg = s end
+    settings.save(cfg,'cfg');
+end)
+
+
+-- Call the load settings function when your addon is loaded
+ashita.events.register('load', 'load_cb', function ()
+    load_settings()
+end);
 
 local function ClearResults()
     results = T{}
@@ -331,9 +380,9 @@ end
 local function RenderInterface()
     
 	-- Push the styles to change the UI colors
-    local stylesToUse = darkModeEnabled[1] and darkPfStyles or lightPfStyles
+    local stylesToUse = cfg.darkModeEnabled.value and darkPfStyles or lightPfStyles
 	PushStyles(stylesToUse); 
-	
+
     if (imgui.Begin('Party Finder', interface.IsOpen, ImGuiWindowFlags_AlwaysAutoResize)) then
         -- Set the cursor position to center the content
         local contentWidth = 700;  -- Adjust the width as needed
@@ -366,7 +415,11 @@ local function RenderInterface()
         --imgui.SameLine();
         imgui.Text('Filter:');
         imgui.SameLine();
-        imgui.Checkbox('##Filter_Checkbox', levelFilterCheckbox);
+        --imgui.Checkbox('##Filter_Checkbox', levelFilterCheckbox);
+        if imgui.Checkbox('##Filter_Checkbox', {cfg.levelFilterCheckbox.value}) then
+            cfg.levelFilterCheckbox.value = not cfg.levelFilterCheckbox.value
+            save_settings() -- Save settings when changed
+        end
         imgui.SameLine();
         imgui.Text('Range:');
         imgui.SameLine();
@@ -379,7 +432,11 @@ local function RenderInterface()
         local maxLevel = 75
         
         -- Create the InputInt with a smaller width
-        imgui.InputInt('##FilterRange_InputInt', levelRangeInput, 5);
+        --imgui.InputInt('##FilterRange_InputInt', levelRangeInput, 5);
+        if imgui.InputInt('##FilterRange_InputInt', cfg.levelRange,5) then
+            cfg.levelRange = levelRangeInput
+            save_settings() -- Save settings when changed
+        end
         levelRangeInput[1] = math.min(maxLevel, math.max(minLevel, levelRangeInput[1]))
         
         -- Reset the item width to the default value
@@ -393,10 +450,14 @@ local function RenderInterface()
 
         imgui.Text('Comments:');
         imgui.SameLine();
-        imgui.Checkbox('##Comment_Checkbox', commentSetColumnEnabled);
+        --imgui.Checkbox('##Comment_Checkbox', commentSetColumnEnabled);
+        if imgui.Checkbox('##Comment_Checkbox',{cfg.commentBoxEnabled.value}) then
+            cfg.commentBoxEnabled.value = not cfg.commentBoxEnabled.value
+            save_settings() -- Save settings when changed
+        end
 
         -- Adjust panel width based on comment column visibility
-        local panelWidth = commentSetColumnEnabled[1] and 900 or 530
+        local panelWidth = cfg.commentBoxEnabled.value and 900 or 530
 
         -- Define the column positions including the additional space for the icon
         local columnPositions = {
@@ -406,7 +467,7 @@ local function RenderInterface()
         }
 
         -- Add Comment position if enabled
-        if commentSetColumnEnabled[1] then
+        if cfg.commentBoxEnabled.value then
             columnPositions.Comment = 540
         end
 
@@ -414,8 +475,14 @@ local function RenderInterface()
         imgui.SameLine();
         imgui.Text('Dark Mode:');
         imgui.SameLine();
-        imgui.Checkbox('##Dark_Mode_Checkbox', darkModeEnabled)
+
+        if imgui.Checkbox('##Dark_Mode_Checkbox',{cfg.darkModeEnabled.value}) then
+            cfg.darkModeEnabled.value = not cfg.darkModeEnabled.value
+            save_settings() -- Save settings when changed
+        end
         -- Determine which styles to use based on the dark mode toggle
+
+        
 
         imgui.BeginGroup();
         imgui.BeginChild('leftpane', { panelWidth, 225 }, true);
@@ -429,7 +496,7 @@ local function RenderInterface()
         end
 
         -- Render Comment header if enabled
-        if commentSetColumnEnabled[1] then
+        if cfg.commentBoxEnabled.value then
             imgui.SameLine(columnPositions.Comment);
             imgui.Text('Comment');
         end
@@ -475,7 +542,7 @@ local function RenderInterface()
             imgui.SameLine(columnPositions.Location);
             imgui.Text(entry.Zone);
 
-            if commentSetColumnEnabled[1] then
+            if cfg.commentBoxEnabled.value then
                 -- Determine the icon ID based on the current seacomText
                 local iconID = seacomIconMapping[seacomText] or 0  -- Default to 0 if no match is found
             
